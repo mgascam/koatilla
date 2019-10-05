@@ -29,8 +29,11 @@ app.use(async (ctx, next) => {
 
 app.use(async (ctx, next) => {
   await next();
-  zlib.brotliDecompress(ctx.response.body, (err, result) => {
-    console.log(result.toString('utf8'))
+  zlib.brotliDecompress(ctx.response.body, (err, buffer) => {
+    if (err) throw err;
+    const wstream = fs.createWriteStream(`${ctx.request.path.split('/').pop()}.json`);
+    wstream.write(buffer);
+    wstream.end();
   })
 });
 
