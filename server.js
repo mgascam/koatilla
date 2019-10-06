@@ -1,16 +1,16 @@
-const Koa = require('koa');
-const proxy = require('koa-proxy');
-const cors = require('@koa/cors');
 const zlib = require('zlib');
-
 const fs = require('fs');
 
-const bodyParser = require('koa-body-parser');
+const Koa = require('koa');
+const Router = require('koa-router');
+const router = new Router();
+const proxy = require('koa-proxy');
 
 const app = new Koa();
 
-app.use(cors({origin: '*'}));
-app.use(bodyParser());
+router.get('/', (ctx, next) => {
+  ctx.body = 'Hello!';
+ });
 
 // logger
 app.use(async (ctx, next) => {
@@ -19,26 +19,25 @@ app.use(async (ctx, next) => {
   console.log(`${ctx.method} ${ctx.url} - ${rt}`);
 });
 
-// x-response-time
-app.use(async (ctx, next) => {
-  const start = Date.now();
-  await next();
-  const ms = Date.now() - start;
-  ctx.set('X-Response-Time', `${ms}ms`);
-});
-
 app.use(async (ctx, next) => {
   await next();
   zlib.brotliDecompress(ctx.response.body, (err, buffer) => {
-    if (err) throw err;
-    const wstream = fs.createWriteStream(`${ctx.request.path.split('/').pop()}.json`);
-    wstream.write(buffer);
-    wstream.end();
+    if (err) {
+      console.error(err)
+    }
+    if (buffer) {
+      const wstream = fs.createWriteStream(`${ctx.request.path.split('/').pop()}.json`);
+      wstream.write(buffer);
+      wstream.end();
+    }
   })
 });
 
 app.use(proxy({
-  host: 'https://pokeapi.co'
+  host: 'https://pokeapi.co',
+  match: /^\/api\/v2\//
 }));
+app.use(router.routes());
+app.use(router.allowedMethods());
 
 app.listen(3000);
