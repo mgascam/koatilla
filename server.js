@@ -1,6 +1,5 @@
 const zlib = require('zlib');
-const fsPromise = require('fs').promises;
-const fs = require('fs');
+const fs = require('fs-extra');
 
 const Koa = require('koa');
 const cors = require('@koa/cors');
@@ -23,9 +22,9 @@ app.use(async (ctx, next) => {
 });
 
 app.use(async (ctx, next) => {
-  const path = `${ctx.request.path.split('/').pop()}.json`;
+  const path = `./data${ctx.request.path}.json`;
   try {
-    let rawData = await fsPromise.readFile(path);
+    let rawData = await fs.readFile(path);
     ctx.body = JSON.parse(rawData);
   } catch (err) {
     await next();
@@ -36,21 +35,22 @@ app.use(async (ctx, next) => {
 app.use(async (ctx, next) => {
   await next();
   // TODO extract to function
-  zlib.brotliDecompress(ctx.response.body, (err, buffer) => {
+  // Since response is gzipped, decompress
+   zlib.gunzip(ctx.response.body, (err, buffer) => {
     if (err) {
       console.error(err)
     }
     if (buffer) {
-      const wstream = fs.createWriteStream(`${ctx.request.path}.json`);
-      wstream.write(buffer);
-      wstream.end();
+      fs.outputFile(`./data${ctx.request.path}.json`, buffer, (err) => {
+        if (err) throw err;
+        console.log('The file has been saved!');
+      })
     }
   })
 });
 
 app.use(proxy({
-  host: 'https://pokeapi.co',
-  match: /^\/api\/v2\//
+  host: 'http://bos.localhost'
 }));
 app.use(router.routes());
 app.use(router.allowedMethods());
