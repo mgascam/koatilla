@@ -22,13 +22,14 @@ app.use(async (ctx, next) => {
 });
 
 app.use(async (ctx, next) => {
-  const path = `./data${ctx.request.path}.json`;
   try {
+    const path = `./data${ctx.request.path}.json`;
     let rawData = await fs.readFile(path);
+    console.log(`File ${path} found. Serving from filesystem`);
     ctx.body = JSON.parse(rawData);
   } catch (err) {
     await next();
-    console.log('file not found retrieving from proxy');
+    console.log(`File not found. Requesting it from proxy`);
   }
 });
 
@@ -41,9 +42,10 @@ app.use(async (ctx, next) => {
       console.error(err)
     }
     if (buffer) {
-      fs.outputFile(`./data${ctx.request.path}.json`, buffer, (err) => {
+      const file = `./data${ctx.request.path}.json`
+      fs.outputFile(file, buffer, (err) => {
         if (err) throw err;
-        console.log('The file has been saved!');
+        console.log(`File ${file} written`);
       })
     }
   })
