@@ -11,7 +11,7 @@ const app = new Koa();
 app.use(cors({origin: '*'}));
 
 router.get('/', (ctx, next) => {
-  ctx.body = 'Hello!';
+  ctx.body = 'Hello Koatilla!';
  });
 
 // logger
@@ -39,10 +39,10 @@ app.use(async (ctx, next) => {
   // Since response is gzipped, decompress
    zlib.gunzip(ctx.response.body, (err, buffer) => {
     if (err) {
-      console.error(err)
+      console.error(err);
     }
     if (buffer) {
-      const file = `./data${ctx.request.path}.json`
+      const file = `./data${ctx.request.path}.json`;
       fs.outputFile(file, buffer, (err) => {
         if (err) throw err;
         console.log(`File ${file} written`);
