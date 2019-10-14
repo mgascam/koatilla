@@ -8,11 +8,13 @@ const router = new Router();
 const proxy = require('koa-proxy');
 
 const app = new Koa();
-app.use(cors({origin: '*'}));
+app.use(cors({
+  origin: '*'
+}));
 
 router.get('/', (ctx, next) => {
   ctx.body = 'Hello Koatilla!';
- });
+});
 
 // logger
 app.use(async (ctx, next) => {
@@ -35,21 +37,29 @@ app.use(async (ctx, next) => {
 
 app.use(async (ctx, next) => {
   await next();
-  // TODO extract to function
-  // Since response is gzipped, decompress
-   zlib.gunzip(ctx.response.body, (err, buffer) => {
-    if (err) {
-      console.error(err);
-    }
-    if (buffer) {
-      const file = `./data${ctx.request.path}.json`;
-      fs.outputFile(file, buffer, (err) => {
-        if (err) throw err;
-        console.log(`File ${file} written`);
-      })
-    }
-  })
+  switch (ctx.response.headers['content-encoding']) {
+    // TODO add br and refactor using pipe
+    case 'gzip':
+      // Since response is gzipped, decompress
+      zlib.gunzip(ctx.response.body, (err, buffer) => {
+        if (err) {
+          console.error(err);
+        }
+        writeBuffer(buffer, ctx.request.path);
+      });
+      break;
+    default:
+      writeBuffer(ctx.response.body, ctx.request.path);
+  }
 });
+
+function writeBuffer(buffer, path) {
+  const file = `./data${path}.json`;
+  fs.outputFile(file, buffer, (err) => {
+    if (err) throw err;
+    console.log(`File ${file} written`);
+  })
+}
 
 app.use(proxy({
   host: 'http://bos.localhost'
